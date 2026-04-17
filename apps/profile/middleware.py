@@ -18,6 +18,43 @@ class LastSeenMiddleware(object):
     def __init__(self, get_response=None):
         self.get_response = get_response
 
+    def _ensure_self_hosted_all_premium(self, request):
+        if not getattr(settings, "SELF_HOSTED_ALL_PREMIUM", False):
+            return
+        if not hasattr(request, "user") or not request.user.is_authenticated:
+            return
+
+        profile = request.user.profile
+        needs_upgrade = (
+            not profile.is_premium
+            or not profile.is_archive
+            or not profile.is_pro
+            or profile.is_premium_trial
+            or profile.premium_expire is not None
+        )
+        if not needs_upgrade:
+            return
+
+        from apps.profile.models import Profile
+        from apps.reader.models import UserSubscription
+
+        Profile.objects.filter(pk=profile.pk).update(
+            is_premium=True,
+            is_archive=True,
+            is_pro=True,
+            is_premium_trial=False,
+            premium_expire=None,
+            premium_renewal=False,
+        )
+        UserSubscription.objects.filter(user=request.user, active=False).update(active=True)
+
+        profile.is_premium = True
+        profile.is_archive = True
+        profile.is_pro = True
+        profile.is_premium_trial = False
+        profile.premium_expire = None
+        profile.premium_renewal = False
+
     def process_response(self, request, response):
         if (
             (
@@ -52,6 +89,7 @@ class LastSeenMiddleware(object):
 
     def __call__(self, request):
         response = None
+        self._ensure_self_hosted_all_premium(request)
         if hasattr(self, "process_request"):
             response = self.process_request(request)
         if not response:

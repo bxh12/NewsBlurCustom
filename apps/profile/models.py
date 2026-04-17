@@ -3437,20 +3437,31 @@ class GooglePlayIds(models.Model):
 
 def create_profile(sender, instance, created, **kwargs):
     if created:
-        from apps.profile.tasks import EmailNewPremiumTrial
+        if getattr(settings, "SELF_HOSTED_ALL_PREMIUM", False):
+            profile = Profile.objects.create(
+                user=instance,
+                is_premium=True,
+                is_archive=True,
+                is_pro=True,
+                is_premium_trial=False,
+                premium_expire=None,
+            )
+            logging.user(instance, "~BY~SK~FW~SBNEW USER WITH SELF-HOSTED PRO ACCESS!~SN")
+        else:
+            from apps.profile.tasks import EmailNewPremiumTrial
 
-        now = datetime.datetime.now()
-        profile = Profile.objects.create(
-            user=instance,
-            is_premium=True,
-            is_premium_trial=True,
-            premium_expire=now + datetime.timedelta(days=30),
-        )
-        EmailNewPremiumTrial.delay(user_id=instance.pk)
-        logging.user(
-            instance,
-            "~BY~SK~FW~SBNEW USER WITH PREMIUM TRIAL! Expires %s~SN" % profile.premium_expire,
-        )
+            now = datetime.datetime.now()
+            profile = Profile.objects.create(
+                user=instance,
+                is_premium=True,
+                is_premium_trial=True,
+                premium_expire=now + datetime.timedelta(days=30),
+            )
+            EmailNewPremiumTrial.delay(user_id=instance.pk)
+            logging.user(
+                instance,
+                "~BY~SK~FW~SBNEW USER WITH PREMIUM TRIAL! Expires %s~SN" % profile.premium_expire,
+            )
     else:
         Profile.objects.get_or_create(user=instance)
 
