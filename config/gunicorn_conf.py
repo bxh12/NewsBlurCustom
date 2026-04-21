@@ -38,7 +38,9 @@ if workers > 16:
 
 if os.environ.get("DOCKERBUILD", False):
     workers = 2
-    reload = True
+    # In "home production" mode we still run with DOCKERBUILD=True, but we
+    # don't want code auto-reload churn.
+    reload = False
 
 # If hostname has staging in it, only 2 workers and higher max_requests
 # since health checks from 3 haproxy backends (every 1s each) burn through

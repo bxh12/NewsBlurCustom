@@ -26,6 +26,8 @@ RUN set -ex \
         libncurses-dev \
         zlib1g-dev \
         wget curl ca-certificates \
+        nodejs npm \
+    && npm install -g terser \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Rust (required for tiktoken)
