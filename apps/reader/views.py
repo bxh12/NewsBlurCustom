@@ -173,7 +173,24 @@ RIVER_SLOWDOWN_USERS = []
 
 
 def get_subdomain(request):
+    """Return the subdomain portion of the host.
+
+    NewsBlur uses subdomains (e.g. username.newsblur.com) for some social pages.
+
+    For self-hosted deployments (especially behind Tailscale MagicDNS where hosts
+    often have multiple dots), this behavior is usually undesirable because it
+    can cause the homepage to redirect to the configured Django Site domain.
+
+    Set settings.DISABLE_SUBDOMAINS=True to force subdomain handling off.
+    """
+
+    if getattr(settings, "DISABLE_SUBDOMAINS", False):
+        return None
+
     host = request.META.get("HTTP_HOST")
+    if host:
+        host = host.split(":")[0]  # strip port
+
     if host and host.count(".") >= 2:
         return host.split(".")[0]
     else:

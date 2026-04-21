@@ -12,6 +12,7 @@ except ImportError:
 GIGS_OF_MEMORY = psutil.virtual_memory().total / 1024 / 1024 / 1024.0
 NUM_CPUS = psutil.cpu_count()
 
+# Bind inside the container. Exposure is controlled via Docker port mappings / HAProxy.
 bind = "0.0.0.0:8000"
 
 pidfile = "/srv/newsblur/logs/gunicorn.pid"
