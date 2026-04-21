@@ -501,7 +501,14 @@ def paypal_webhooks(request):
     elif data["event_type"] in ["BILLING.SUBSCRIPTION.ACTIVATED", "BILLING.SUBSCRIPTION.UPDATED"]:
         user = find_paypal_user(data, custom_field="custom_id")
         if user:
-            user.profile.store_paypal_sub_id(data["resource"]["id"])
+            # Don't promote a SUSPENDED/CANCELLED sub to primary. When upgrading
+            # (e.g. premium -> archive), suspending the old sub fires UPDATED for it,
+            # which would otherwise overwrite paypal_sub_id with the now-dead old sub.
+            resource_status = data["resource"].get("status")
+            is_active_status = resource_status in ["ACTIVE", "APPROVED", "APPROVAL_PENDING"]
+            user.profile.store_paypal_sub_id(
+                data["resource"]["id"], skip_save_primary=not is_active_status
+            )
             # plan_id = data['resource']['plan_id']
             # if plan_id == Profile.plan_to_paypal_plan_id('premium'):
             #     user.profile.activate_premium()
@@ -1134,6 +1141,33 @@ def setup_usage_billing(request):
     if not settings.STRIPE_PRICE_TEXT_CLASSIFICATION or not settings.STRIPE_PRICE_IMAGE_CLASSIFICATION:
         logging.user(request, "~BR~FRStripe usage billing prices not configured")
         return HttpResponseRedirect(reverse("index"))
+
+    # Guard against duplicate subscriptions. Meter events are customer-scoped,
+    # so any extra active sub on the same classifier prices silently double-bills
+    # the user every cycle. Bail out to the billing portal instead of creating
+    # a second subscription.
+    if request.user.profile.stripe_id:
+        classifier_price_ids = {
+            settings.STRIPE_PRICE_TEXT_CLASSIFICATION,
+            settings.STRIPE_PRICE_IMAGE_CLASSIFICATION,
+        }
+        try:
+            existing = stripe.Subscription.list(
+                customer=request.user.profile.stripe_id, status="active", limit=20
+            )
+            for sub in existing.data:
+                for item in sub["items"].data:
+                    if item.price and item.price.id in classifier_price_ids:
+                        logging.user(
+                            request,
+                            "~BR~FRUsage billing already active; redirecting to portal",
+                        )
+                        return HttpResponseRedirect(
+                            "https://%s%s?next=payments&usage_billing=already_active"
+                            % (domain, reverse("index"))
+                        )
+        except stripe.error.StripeError as e:
+            logging.user(request, f"~BR~FRStripe subscription list failed: {e}")
 
     session_dict = {
         "line_items": [

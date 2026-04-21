@@ -1181,7 +1181,9 @@ class Profile(models.Model):
         logging.user(self.user, f"~FBGoogle Play purchase token ~SBadded~SN: product={product_id}")
 
     def setup_premium_history(self, alt_email=None, set_premium_expire=True, force_expiration=False):
-        # Deduplicate payments: keep only one per provider per identifier, then per day
+        # Deduplicate payments: keep only one per provider per identifier, then per day.
+        # Refund rows are never deduped — a charge and its same-day refund are distinct
+        # events and the refund must remain visible in the user's history.
         for provider in [
             "paypal",
             "stripe",
@@ -1197,6 +1199,7 @@ class Profile(models.Model):
                 PaymentHistory.objects.filter(user=self.user, payment_provider=provider)
                 .exclude(payment_identifier__isnull=True)
                 .exclude(payment_identifier__in=["missing", "in-progress"])
+                .exclude(refunded=True)
                 .order_by("payment_date")
             ):
                 if payment.payment_identifier in seen_identifiers:
@@ -1207,9 +1210,9 @@ class Profile(models.Model):
             # Second pass: dedup by date (race condition duplicates on same day)
             seen_dates = set()
             for payment in list(
-                PaymentHistory.objects.filter(user=self.user, payment_provider=provider).order_by(
-                    "payment_date"
-                )
+                PaymentHistory.objects.filter(user=self.user, payment_provider=provider)
+                .exclude(refunded=True)
+                .order_by("payment_date")
             ):
                 payment_day = payment.payment_date.date()
                 if payment_day in seen_dates:
@@ -1234,7 +1237,9 @@ class Profile(models.Model):
         self.retrieve_paypal_ids()
         if self.paypal_sub_id:
             seen_payments = set()
-            seen_payment_history = PaymentHistory.objects.filter(user=self.user, payment_provider="paypal")
+            seen_payment_history = PaymentHistory.objects.filter(
+                user=self.user, payment_provider="paypal"
+            ).exclude(refunded=True)
             deleted_paypal_payments = 0
             for payment in list(seen_payment_history):
                 if payment.payment_date.date() in seen_payments:
@@ -1345,7 +1350,9 @@ class Profile(models.Model):
             self.retrieve_stripe_ids()
 
             seen_payments = set()
-            existing_stripe_history = PaymentHistory.objects.filter(user=self.user, payment_provider="stripe")
+            existing_stripe_history = PaymentHistory.objects.filter(
+                user=self.user, payment_provider="stripe"
+            ).exclude(refunded=True)
             deleted_stripe_payments = 0
             for payment in list(existing_stripe_history):
                 if payment.payment_date.date() in seen_payments:
@@ -1855,6 +1862,7 @@ class Profile(models.Model):
                 payment_date=datetime.datetime.now(),
                 payment_amount=-int(round(refund_amount)),
                 payment_provider="paypal",
+                payment_identifier=response.get("id"),
                 refunded=True,
             )
             logging.user(self.user, "~FRRefunding paypal payment: $%s/%s" % (refund_amount, refunded))
@@ -2151,7 +2159,15 @@ class Profile(models.Model):
             return None
 
     def retrieve_stripe_ids(self):
-        if not self.stripe_id:
+        if not self.stripe_id or not self.user_id:
+            return
+
+        user_email = User.objects.filter(pk=self.user_id).values_list("email", flat=True).first()
+        if not user_email:
+            logging.debug(
+                " ---> Couldn't sync Stripe IDs for deleted user_id=%s stripe_id=%s"
+                % (self.user_id, self.stripe_id)
+            )
             return
 
         stripe.api_key = settings.STRIPE_SECRET
@@ -2159,14 +2175,22 @@ class Profile(models.Model):
         stripe_email = stripe_customer.email
 
         stripe_ids = set()
-        for email in set([stripe_email, self.user.email]):
+        for email in {stripe_email, user_email}:
+            if not email:
+                continue
             customers = stripe.Customer.list(email=email)
             for customer in customers:
                 stripe_ids.add(customer.stripe_id)
 
-        self.user.stripe_ids.all().delete()
-        for stripe_id in stripe_ids:
-            self.user.stripe_ids.create(stripe_id=stripe_id)
+        try:
+            StripeIds.objects.filter(user_id=self.user_id).delete()
+            for stripe_id in stripe_ids:
+                StripeIds.objects.create(user_id=self.user_id, stripe_id=stripe_id)
+        except IntegrityError:
+            logging.debug(
+                " ---> User disappeared while syncing Stripe IDs for user_id=%s stripe_id=%s"
+                % (self.user_id, self.stripe_id)
+            )
 
     def retrieve_paypal_ids(self):
         ipns = PayPalIPN.objects.filter(
