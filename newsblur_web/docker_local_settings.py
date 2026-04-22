@@ -163,10 +163,18 @@ _gemini_configured = (
     and "XXXX" not in _gemini_key
     and "XXX" not in _gemini_key
 )
-ASK_AI_MODEL = os.getenv("ASK_AI_MODEL", "gemini-3" if _gemini_configured else "opus")
+_ask_ai_model_env = os.getenv("ASK_AI_MODEL")
+ASK_AI_MODEL = (
+    _ask_ai_model_env
+    if _ask_ai_model_env
+    else ("gemini-3" if _gemini_configured else "opus")
+)
 
-BRIEFING_MODEL = os.getenv(
-    "BRIEFING_MODEL", "gemini-flash-lite" if _gemini_configured else "haiku"
+_briefing_model_env = os.getenv("BRIEFING_MODEL")
+BRIEFING_MODEL = (
+    _briefing_model_env
+    if _briefing_model_env
+    else ("gemini-flash-lite" if _gemini_configured else "haiku")
 )  # Options: haiku, gpt-5-mini, gemini-flash-lite, grok-4.1-fast
 
 # ===========
