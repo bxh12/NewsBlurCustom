@@ -76,6 +76,38 @@ make
 
 Visit `https://localhost` (type `thisisunsafe` to bypass the self-signed certificate warning).
 
+### Access over Tailscale (MagicDNS)
+
+This setup works well over a Tailscale tailnet by binding HAProxy to your node's **Tailscale IP** and serving TLS with a cert in `config/certificates/`.
+
+1) Ensure `.env` contains your current Tailscale IP (used by `docker-compose.yml` port bindings):
+
+```bash
+TAILSCALE_IP=100.94.165.14
+```
+
+2) Set your canonical URL and disable username-subdomain routing (MagicDNS hostnames have multiple dots, which otherwise triggers NewsBlur's subdomain redirect logic):
+
+Create/modify `newsblur_web/local_settings.py`:
+
+```py
+NEWSBLUR_URL = "https://beelink-ubuntu.tail624886.ts.net"
+SESSION_COOKIE_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
+PUSH_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
+DISABLE_SUBDOMAINS = True
+```
+
+3) Provide a TLS cert PEM (cert + private key concatenated) in:
+
+- `config/certificates/localhost.pem`
+- `config/certificates/<your-magicdns-host>.pem`
+
+Self-signed works (you'll need to bypass the browser warning). For a trusted cert, prefer using `tailscale cert` (requires appropriate tailnet permissions).
+
+Then access NewsBlur from any device on your tailnet:
+
+- `https://beelink-ubuntu.tail624886.ts.net/`
+
 **Common commands:**
 - `make` - Start/update and apply migrations (run after `git pull`)
 - `make log` - View web and node logs

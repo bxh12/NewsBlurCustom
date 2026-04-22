@@ -9,9 +9,10 @@ ADMINS = (("Samuel Clay", "samuel@newsblur.com"),)
 
 SERVER_EMAIL = "server@newsblur.com"
 HELLO_EMAIL = "hello@newsblur.com"
-NEWSBLUR_URL = "https://localhost"
-PUSH_DOMAIN = "localhost"
-SESSION_COOKIE_DOMAIN = "localhost"
+NEWSBLUR_URL = "https://beelink-ubuntu.tail624886.ts.net"
+PUSH_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
+DISABLE_SUBDOMAINS = True
+SESSION_COOKIE_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
 
 # ===================
 # = Global Settings =
@@ -51,7 +52,7 @@ if not AUTO_PREMIUM:
     AUTO_PREMIUM_PRO_NEW_USERS = False
 AUTO_ENABLE_NEW_USERS = True
 ENFORCE_SIGNUP_CAPTCHA = False
-ENABLE_PUSH = False
+ENABLE_PUSH = True
 
 PRO_MINUTES_BETWEEN_FETCHES = 15
 
@@ -180,7 +181,7 @@ SERVER_NAME = "nblocalhost"
 NEWSBLUR_URL = os.getenv("NEWSBLUR_URL", "https://localhost")
 
 if NEWSBLUR_URL == "https://localhost":
-    SESSION_COOKIE_DOMAIN = "localhost"
+    SESSION_COOKIE_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
 
 SESSION_ENGINE = "redis_sessions.session"
 
