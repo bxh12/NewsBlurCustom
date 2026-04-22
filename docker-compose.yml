@@ -10,6 +10,13 @@ services:
     environment:
       - DOCKERBUILD=True
       - RUNWITHMAKEBUILD=${RUNWITHMAKEBUILD:-True}
+      # AI keys (set in .env)
+      - GOOGLE_GEMINI_API_KEY=${GOOGLE_GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - XAI_API_KEY=${XAI_API_KEY:-}
+      - ASK_AI_MODEL=${ASK_AI_MODEL:-}
+      - BRIEFING_MODEL=${BRIEFING_MODEL:-}
     stdin_open: true
     tty: true
     restart: unless-stopped
@@ -170,6 +177,13 @@ services:
       - ${PWD}:/srv/newsblur
     environment:
       - DOCKERBUILD=True
+      # AI keys (set in .env)
+      - GOOGLE_GEMINI_API_KEY=${GOOGLE_GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - XAI_API_KEY=${XAI_API_KEY:-}
+      - ASK_AI_MODEL=${ASK_AI_MODEL:-}
+      - BRIEFING_MODEL=${BRIEFING_MODEL:-}
 
   newsblur_mcp:
     container_name: newsblur_mcp

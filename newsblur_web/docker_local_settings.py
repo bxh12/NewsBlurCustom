@@ -52,7 +52,10 @@ if not AUTO_PREMIUM:
     AUTO_PREMIUM_PRO_NEW_USERS = False
 AUTO_ENABLE_NEW_USERS = True
 ENFORCE_SIGNUP_CAPTCHA = False
-ENABLE_PUSH = False
+
+# Push notifications
+# Enable by default for self-hosted installs; requires APNS key + IDs to actually deliver iOS pushes.
+ENABLE_PUSH = True
 
 PRO_MINUTES_BETWEEN_FETCHES = 15
 
@@ -146,14 +149,25 @@ BACKED_BY_AWS = {
 }
 
 # AI Provider API Keys
-# Replace placeholders with real keys to enable AI features.
-# AI classifiers (content + image filters) work automatically when
-# a real Anthropic key is configured -- no billing setup needed.
-OPENAI_API_KEY = "sk-svcacct-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-ANTHROPIC_API_KEY = "sk-ant-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-GOOGLE_GEMINI_API_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-ASK_AI_MODEL = "opus"  # Options: opus, gpt-5.2, gemini-3, grok-4.1
-BRIEFING_MODEL = "haiku"  # Options: haiku, gpt-5-mini, gemini-flash-lite, grok-4.1-fast
+# Prefer environment variables so secrets don't live in the repo.
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "sk-svcacct-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "sk-ant-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+GOOGLE_GEMINI_API_KEY = os.getenv("GOOGLE_GEMINI_API_KEY", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+XAI_API_KEY = os.getenv("XAI_API_KEY", "")
+
+# Ask AI default model.
+# Prefer Gemini if a non-placeholder key is configured, otherwise fall back to the upstream default.
+_gemini_key = GOOGLE_GEMINI_API_KEY or ""
+_gemini_configured = (
+    len(_gemini_key) > 20
+    and "XXXX" not in _gemini_key
+    and "XXX" not in _gemini_key
+)
+ASK_AI_MODEL = os.getenv("ASK_AI_MODEL", "gemini-3" if _gemini_configured else "opus")
+
+BRIEFING_MODEL = os.getenv(
+    "BRIEFING_MODEL", "gemini-flash-lite" if _gemini_configured else "haiku"
+)  # Options: haiku, gpt-5-mini, gemini-flash-lite, grok-4.1-fast
 
 # ===========
 # = Logging =
