@@ -9,9 +9,10 @@ ADMINS = (("Samuel Clay", "samuel@newsblur.com"),)
 
 SERVER_EMAIL = "server@newsblur.com"
 HELLO_EMAIL = "hello@newsblur.com"
-NEWSBLUR_URL = "https://localhost"
-PUSH_DOMAIN = "localhost"
-SESSION_COOKIE_DOMAIN = "localhost"
+NEWSBLUR_URL = "https://beelink-ubuntu.tail624886.ts.net"
+PUSH_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
+SESSION_COOKIE_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
+DISABLE_SUBDOMAINS = True
 
 # ===================
 # = Global Settings =
@@ -177,12 +178,20 @@ DO_TOKEN_LOG = "0000000000000000000000000000000000000000000000000000000000000000
 DO_TOKEN_FABRIC = "0000000000000000000000000000000000000000000000000000000000000000"
 
 SERVER_NAME = "nblocalhost"
-NEWSBLUR_URL = os.getenv("NEWSBLUR_URL", "https://localhost")
+NEWSBLUR_URL = os.getenv("NEWSBLUR_URL", "https://beelink-ubuntu.tail624886.ts.net")
 
-if NEWSBLUR_URL == "https://localhost":
-    SESSION_COOKIE_DOMAIN = "localhost"
+if NEWSBLUR_URL == "https://beelink-ubuntu.tail624886.ts.net":
+    SESSION_COOKIE_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
 
 SESSION_ENGINE = "redis_sessions.session"
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+CSRF_TRUSTED_ORIGINS = [
+    "https://beelink-ubuntu.tail624886.ts.net",
+    "https://100.94.165.14",
+]
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 # CORS_ORIGIN_REGEX_WHITELIST = ('^(https?://)?(\w+\.)?nb.local\.com$', )
 
