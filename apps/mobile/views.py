@@ -11,13 +11,17 @@ from apps.profile.models import Profile
 from apps.reader.models import UserSubscription, UserSubscriptionFolders
 from utils import json_functions as json
 from utils import log as logging
+from utils.user_functions import get_user
 
 
 def index(request):
     """Mobile PWA workspace - serves the progressive web app interface"""
     if request.user.is_anonymous:
         from apps.reader.views import welcome
-        return welcome(request)
+        
+        # Get the welcome response tuple and render it properly
+        context, template_name = welcome(request)
+        return render(request, template_name, context)
     
     user = request.user
     feed_count = UserSubscription.objects.filter(user=request.user).count()

@@ -1,121 +1,468 @@
-{% extends 'base.html' %}
-
-{% load recommendations_tags utils_tags statistics_tags %}
-
-{% block extra_head_js %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/reader/mobile.css' %}" />
-    <script src="{% static 'js/newsblur/mobile/mobile_reader.js' %}"></script>
-    <script>
-        $(document).ready(function() {
-            NEWSBLUR.mobile = new NEWSBLUR.MobileReader();
-            NEWSBLUR.mobile.init();
-            
-            // Register service worker for PWA features
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('{% static "js/service-worker.js" %}')
-                    .then(function(reg) {
-                        console.log('[Mobile] Service Worker registered successfully');
-                        // Check for updates periodically
-                        setInterval(function() {
-                            reg.update();
-                        }, 60000);
-                    })
-                    .catch(function(error) {
-                        console.warn('[Mobile] Service Worker registration failed:', error);
-                    });
-            }
-            
-            // Request notification permission
-            if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission();
-            }
-        });
-    </script>
-{% endblock %}
-
-{% block bodyclass %}
-  NB-body-mobile NB-mobile-single-pane
-  {% if preferences.theme == "dark" %}NB-dark{% endif %}
-{% endblock %}
-
-{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewsBlur - Mobile Reader</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .NB-mobile-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .NB-mobile-header {
+            padding: 10px 15px;
+            background: #333;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 50px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .NB-mobile-header h1 {
+            margin: 0;
+            flex: 1;
+            text-align: center;
+            font-size: 20px;
+        }
+        
+        .NB-mobile-header button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        
+        .NB-mobile-main {
+            flex: 1;
+            overflow: auto;
+            padding: 10px;
+        }
+        
+        .NB-mobile-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            height: 100vh;
+            background: white;
+            border-right: 1px solid #ddd;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .NB-mobile-sidebar.active {
+            transform: translateX(0);
+        }
+        
+        .NB-mobile-sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .NB-mobile-sidebar-header h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+        
+        .NB-mobile-sidebar-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #333;
+        }
+        
+        .NB-user-info {
+            padding: 10px 15px;
+            border-bottom: 1px solid #ddd;
+            font-size: 14px;
+            background: #f9f9f9;
+        }
+        
+        .NB-mobile-feeds-list {
+            flex: 1;
+            overflow: auto;
+            padding: 10px 0;
+        }
+        
+        .NB-mobile-feed-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .NB-mobile-feed-item:hover {
+            background: #f9f9f9;
+        }
+        
+        .NB-mobile-feed-item.active {
+            background: #007bff;
+            color: white;
+            border-left: 4px solid #0056b3;
+        }
+        
+        .NB-mobile-sidebar-footer {
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            background: #fff;
+        }
+        
+        .NB-mobile-sidebar-footer button {
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .NB-mobile-sidebar-footer button:hover {
+            background: #0056b3;
+        }
+        
+        .NB-mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 99;
+        }
+        
+        .NB-mobile-overlay.active {
+            display: block;
+        }
+        
+        .NB-mobile-stories-header {
+            margin-bottom: 15px;
+        }
+        
+        .NB-mobile-stories-header h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            color: #333;
+        }
+        
+        .NB-mobile-filter-tabs {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .NB-filter-tab {
+            padding: 8px 12px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .NB-filter-tab.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .NB-mobile-stories-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .NB-mobile-story-item {
+            padding: 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .NB-mobile-story-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .NB-mobile-story-item.unread {
+            font-weight: bold;
+            border-left: 4px solid #007bff;
+        }
+        
+        .NB-mobile-story-title {
+            margin: 0 0 5px 0;
+            font-size: 15px;
+            color: #333;
+        }
+        
+        .NB-mobile-story-meta {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .NB-mobile-loading {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
 
 <div id="NB-mobile-container" class="NB-mobile-container">
   
-  <!-- Mobile Header/Nav -->
+  <!-- Mobile Header -->
   <header class="NB-mobile-header">
-    <button class="NB-mobile-menu-toggle" id="NB-mobile-menu-toggle">
-      <span class="NB-menu-icon">☰</span>
-    </button>
+    <button class="NB-mobile-menu-toggle" id="NB-mobile-menu-toggle">☰</button>
     <h1 class="NB-mobile-title">NewsBlur</h1>
-    <button class="NB-mobile-add-feed" id="NB-mobile-add-feed">
-      <span class="NB-add-icon">+</span>
-    </button>
+    <button class="NB-mobile-add-feed" id="NB-mobile-add-feed">+</button>
   </header>
 
-  <!-- Mobile Sidebar/Drawer -->
+  <!-- Mobile Sidebar -->
   <nav class="NB-mobile-sidebar" id="NB-mobile-sidebar">
     <div class="NB-mobile-sidebar-header">
       <h2>Feeds</h2>
       <button class="NB-mobile-sidebar-close" id="NB-mobile-sidebar-close">✕</button>
     </div>
-    <div class="NB-mobile-feeds-list" id="NB-mobile-feeds-list">
-      <!-- Feeds will be loaded here -->
-    </div>
+    <div class="NB-user-info" id="NB-user-info">Loading...</div>
+    <div class="NB-mobile-feeds-list" id="NB-mobile-feeds-list"></div>
     <div class="NB-mobile-sidebar-footer">
       <button class="NB-mobile-settings-btn" id="NB-mobile-settings-btn">Settings</button>
       <button class="NB-mobile-logout-btn" id="NB-mobile-logout-btn">Logout</button>
     </div>
   </nav>
 
-  <!-- Main Content Area -->
+  <!-- Mobile Overlay -->
+  <div class="NB-mobile-overlay" id="NB-mobile-overlay"></div>
+
+  <!-- Main Content -->
   <main class="NB-mobile-main">
-    
-    <!-- Stories List View -->
-    <div class="NB-mobile-stories-view" id="NB-mobile-stories-view">
-      <div class="NB-mobile-stories-header">
-        <h3 id="NB-mobile-current-feed">All Stories</h3>
-        <div class="NB-mobile-filter-tabs">
-          <button class="NB-filter-tab active" data-filter="unread">Unread</button>
-          <button class="NB-filter-tab" data-filter="all">All</button>
-          <button class="NB-filter-tab" data-filter="starred">Starred</button>
-        </div>
-      </div>
-      <div class="NB-mobile-stories-list" id="NB-mobile-stories-list">
-        <!-- Stories will be loaded here -->
-      </div>
-      <div class="NB-mobile-loading" id="NB-mobile-loading" style="display:none;">
-        <p>Loading...</p>
+    <div class="NB-mobile-stories-header">
+      <h3 id="NB-mobile-current-feed">All Stories</h3>
+      <div class="NB-mobile-filter-tabs">
+        <button class="NB-filter-tab active" data-filter="unread">Unread</button>
+        <button class="NB-filter-tab" data-filter="all">All</button>
+        <button class="NB-filter-tab" data-filter="starred">Starred</button>
       </div>
     </div>
-
-    <!-- Story Detail View -->
-    <div class="NB-mobile-story-view" id="NB-mobile-story-view" style="display:none;">
-      <div class="NB-mobile-story-header">
-        <button class="NB-mobile-back-btn" id="NB-mobile-back-btn">← Back</button>
-        <div class="NB-mobile-story-actions">
-          <button class="NB-mobile-star-btn" id="NB-mobile-star-btn" title="Star story">★</button>
-          <button class="NB-mobile-mark-read-btn" id="NB-mobile-mark-read-btn" title="Mark as read">✓</button>
-        </div>
-      </div>
-      <article class="NB-mobile-story-content">
-        <h2 id="NB-mobile-story-title"></h2>
-        <div class="NB-mobile-story-meta">
-          <span id="NB-mobile-story-feed"></span>
-          <span id="NB-mobile-story-date"></span>
-        </div>
-        <div id="NB-mobile-story-body"></div>
-        <div class="NB-mobile-story-source">
-          <a id="NB-mobile-story-link" target="_blank">Read original</a>
-        </div>
-      </article>
+    <div class="NB-mobile-stories-list" id="NB-mobile-stories-list">
+      <div class="NB-mobile-loading">Loading stories...</div>
     </div>
-
   </main>
 
 </div>
 
-<!-- Mobile Overlay for Sidebar -->
-<div class="NB-mobile-overlay" id="NB-mobile-overlay"></div>
+<!-- jQuery CDN -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-{% endblock %}
+<script>
+var NEWSBLUR = NEWSBLUR || {};
+NEWSBLUR.Mobile = {
+    currentFeedId: null,
+    feeds: [],
+    stories: [],
+    
+    init: function() {
+        console.log('[Mobile] Initializing');
+        this.bindEvents();
+        this.checkLogin();
+        this.loadFeeds();
+        this.requestNotificationPermission();
+    },
+    
+    bindEvents: function() {
+        var self = this;
+        $('#NB-mobile-menu-toggle').on('click', function() {
+            $('#NB-mobile-sidebar').toggleClass('active');
+            $('#NB-mobile-overlay').toggleClass('active');
+        });
+        $('#NB-mobile-sidebar-close').on('click', function() {
+            $('#NB-mobile-sidebar').removeClass('active');
+            $('#NB-mobile-overlay').removeClass('active');
+        });
+        $('#NB-mobile-overlay').on('click', function() {
+            $('#NB-mobile-sidebar').removeClass('active');
+            $('#NB-mobile-overlay').removeClass('active');
+        });
+        $('#NB-mobile-logout-btn').on('click', function() {
+            self.logout();
+        });
+        $(document).on('click', '.NB-mobile-feed-item', function() {
+            var feedId = $(this).data('feed-id');
+            self.loadFeedStories(feedId);
+        });
+        $(document).on('click', '.NB-mobile-story-item', function() {
+            console.log('[Mobile] Story clicked');
+        });
+    },
+    
+    checkLogin: function() {
+        var self = this;
+        $.ajax({
+            url: '/api/is_authenticated',
+            method: 'GET',
+            success: function(data) {
+                if (data && data.authenticated) {
+                    $('#NB-user-info').html('Logged in as: ' + data.username);
+                } else {
+                    $('#NB-user-info').html('Not logged in');
+                }
+            },
+            error: function() {
+                $('#NB-user-info').html('Not logged in');
+            }
+        });
+    },
+    
+    loadFeeds: function() {
+        var self = this;
+        console.log('[Mobile] Loading feeds');
+        $.ajax({
+            url: '/reader/feeds/',
+            method: 'GET',
+            success: function(data) {
+                console.log('[Mobile] Feed response:', data);
+                if (data && data.feeds) {
+                    var feedsList = data.feeds;
+                    if (typeof feedsList === 'object' && !Array.isArray(feedsList)) {
+                        // Convert dict to array
+                        feedsList = Object.values(feedsList);
+                    }
+                    self.feeds = feedsList;
+                    self.renderFeeds();
+                    if (self.feeds.length > 0) {
+                        var feedId = self.feeds[0].id || self.feeds[0].feed_id;
+                        self.loadFeedStories(feedId);
+                    }
+                } else {
+                    $('#NB-mobile-feeds-list').html('<div class="NB-mobile-loading">No feeds found</div>');
+                }
+            },
+            error: function(xhr) {
+                console.error('[Mobile] Error loading feeds:', xhr);
+                $('#NB-mobile-feeds-list').html('<div class="NB-mobile-loading">Error loading feeds. Status: ' + xhr.status + '</div>');
+            }
+        });
+    },
+    
+    renderFeeds: function() {
+        var feedsHtml = '';
+        for (var i = 0; i < this.feeds.length; i++) {
+            var feed = this.feeds[i];
+            var feedTitle = feed.feed_title || feed.title || 'Unknown Feed';
+            var feedId = feed.id || feed.feed_id;
+            feedsHtml += '<div class="NB-mobile-feed-item" data-feed-id="' + feedId + '">' +
+                '<strong>' + feedTitle + '</strong>' +
+                '</div>';
+        }
+        $('#NB-mobile-feeds-list').html(feedsHtml);
+    },
+    
+    loadFeedStories: function(feedId) {
+        var self = this;
+        this.currentFeedId = feedId;
+        console.log('[Mobile] Loading stories for feed:', feedId);
+        
+        $('.NB-mobile-feed-item').removeClass('active');
+        $('.NB-mobile-feed-item[data-feed-id="' + feedId + '"]').addClass('active');
+        
+        $('#NB-mobile-stories-list').html('<div class="NB-mobile-loading">Loading stories...</div>');
+        
+        $.ajax({
+            url: '/reader/feed/' + feedId,
+            method: 'GET',
+            data: {
+                page: 1,
+                include_story_content: true
+            },
+            success: function(data) {
+                console.log('[Mobile] Stories response:', data);
+                if (data && data.stories && data.stories.length > 0) {
+                    self.stories = data.stories;
+                    self.renderStories();
+                } else {
+                    $('#NB-mobile-stories-list').html('<div class="NB-mobile-loading">No stories found</div>');
+                }
+            },
+            error: function(xhr) {
+                console.error('[Mobile] Error loading stories:', xhr);
+                $('#NB-mobile-stories-list').html('<div class="NB-mobile-loading">Error loading stories. Status: ' + xhr.status + '</div>');
+            }
+        });
+    },
+    
+    renderStories: function() {
+        var storiesHtml = '<div class="NB-mobile-stories-list">';
+        if (this.stories.length === 0) {
+            storiesHtml += '<div class="NB-mobile-loading">No stories found</div>';
+        } else {
+            for (var i = 0; i < this.stories.length; i++) {
+                var story = this.stories[i];
+                var storyClass = story.read_status === 1 ? '' : ' unread';
+                var storyTitle = story.story_title || 'No title';
+                var storyDate = story.short_parsed_date || story.story_date || '';
+                storiesHtml += '<div class="NB-mobile-story-item' + storyClass + '">' +
+                    '<h3 class="NB-mobile-story-title">' + storyTitle + '</h3>' +
+                    '<div class="NB-mobile-story-meta">' + storyDate + '</div>' +
+                    '</div>';
+            }
+        }
+        storiesHtml += '</div>';
+        $('#NB-mobile-stories-list').html(storiesHtml);
+    },
+    
+    logout: function() {
+        $.ajax({
+            url: '/api/logout',
+            method: 'POST',
+            success: function() {
+                window.location.href = '/';
+            }
+        });
+    },
+    
+    requestNotificationPermission: function() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }
+};
+
+$(document).ready(function() {
+    NEWSBLUR.Mobile.init();
+});
+</script>
+
+</body>
+</html>

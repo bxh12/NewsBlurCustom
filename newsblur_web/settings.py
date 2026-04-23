@@ -308,12 +308,14 @@ PRO_MINUTES_BETWEEN_FETCHES = 5
 ROOT_URLCONF = "newsblur_web.urls"
 INTERNAL_IPS = ("127.0.0.1",)
 LOGGING_LOG_SQL = True
-APPEND_SLASH = False
+APPEND_SLASH = True
 SESSION_ENGINE = "redis_sessions.session"
 TEST_RUNNER = "utils.testrunner.TestRunner"
 SESSION_COOKIE_NAME = "newsblur_sessionid"
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 365 * 10  # 10 years
-SESSION_COOKIE_DOMAIN = ".newsblur.com"
+# Allow session cookies to work on any domain for development/self-hosted setups
+# In production, set SESSION_COOKIE_DOMAIN to your specific domain via environment variable
+SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN", None)
 SESSION_COOKIE_HTTPONLY = False
 SESSION_COOKIE_SECURE = True
 SENTRY_DSN = "https://XXXNEWSBLURXXX@app.getsentry.com/99999999"
