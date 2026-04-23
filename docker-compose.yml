@@ -221,9 +221,7 @@ services:
       - newsblur_db_mongo
     ports:
       - "127.0.0.1:80:80"
-      - "${TAILSCALE_IP:-100.94.165.14}:80:80"
       - "127.0.0.1:443:443"
-      - "${TAILSCALE_IP:-100.94.165.14}:443:443"
       - "127.0.0.1:1936:1936"
     volumes:
       - ./docker/haproxy/haproxy.docker-compose.cfg:/usr/local/etc/haproxy/haproxy.cfg
