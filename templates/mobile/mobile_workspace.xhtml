@@ -295,10 +295,52 @@ NEWSBLUR.Mobile = {
     
     init: function() {
         console.log('[Mobile] Initializing');
+        this.registerServiceWorker();
         this.bindEvents();
         this.checkLogin();
         this.loadFeeds();
         this.requestNotificationPermission();
+        this.setupMessageHandler();
+    },
+    
+    registerServiceWorker: function() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/mobile/service-worker.js')
+                .then(registration => {
+                    console.log('[Mobile] Service Worker registered:', registration);
+                })
+                .catch(error => {
+                    console.error('[Mobile] Service Worker registration failed:', error);
+                });
+        }
+    },
+    
+    setupMessageHandler: function() {
+        var self = this;
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', function(event) {
+                const message = event.data;
+                if (message.action === 'navigate_to_story') {
+                    console.log('[Mobile] Received navigate message:', message);
+                    self.loadFeedStories(message.feed_id);
+                    // Highlight the story once loaded
+                    setTimeout(() => {
+                        self.highlightStory(message.story_hash);
+                    }, 500);
+                }
+            });
+        }
+    },
+    
+    highlightStory: function(storyHash) {
+        const storyElement = $(`.NB-mobile-story-item[data-story-hash="${storyHash}"]`);
+        if (storyElement.length) {
+            storyElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            storyElement.css('background-color', '#e8f4ff');
+            setTimeout(() => {
+                storyElement.css('background-color', '');
+            }, 2000);
+        }
     },
     
     bindEvents: function() {
@@ -432,7 +474,8 @@ NEWSBLUR.Mobile = {
                 var storyClass = story.read_status === 1 ? '' : ' unread';
                 var storyTitle = story.story_title || 'No title';
                 var storyDate = story.short_parsed_date || story.story_date || '';
-                storiesHtml += '<div class="NB-mobile-story-item' + storyClass + '">' +
+                var storyHash = story.story_hash || '';
+                storiesHtml += '<div class="NB-mobile-story-item' + storyClass + '" data-story-hash="' + storyHash + '">' +
                     '<h3 class="NB-mobile-story-title">' + storyTitle + '</h3>' +
                     '<div class="NB-mobile-story-meta">' + storyDate + '</div>' +
                     '</div>';
@@ -453,8 +496,81 @@ NEWSBLUR.Mobile = {
     },
     
     requestNotificationPermission: function() {
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
+        if ('Notification' in window) {
+            console.log('[Mobile] Notification permission status:', Notification.permission);
+            if (Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    console.log('[Mobile] Notification permission result:', permission);
+                    if (permission === 'granted') {
+                        this.subscribeToNotifications();
+                    }
+                });
+            } else if (Notification.permission === 'granted') {
+                console.log('[Mobile] Notifications already enabled');
+                this.subscribeToNotifications();
+            }
+        }
+    },
+    
+    subscribeToNotifications: function() {
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+            navigator.serviceWorker.ready.then(registration => {
+                registration.pushManager.getSubscription().then(subscription => {
+                    if (!subscription) {
+                        // Subscribe to push notifications
+                        const vapidPublicKey = document.querySelector('meta[name="vapid-key"]')?.content;
+                        const options = {
+                            userVisibleOnly: true,
+                            applicationServerKey: vapidPublicKey ? this.urlBase64ToUint8Array(vapidPublicKey) : undefined
+                        };
+                        
+                        registration.pushManager.subscribe(options).then(subscription => {
+                            console.log('[Mobile] Subscribed to push notifications');
+                            // Send subscription to server
+                            this.registerSubscription(subscription);
+                        }).catch(error => {
+                            console.error('[Mobile] Failed to subscribe:', error);
+                        });
+                    } else {
+                        console.log('[Mobile] Already subscribed to push notifications');
+                    }
+                });
+            });
+        }
+    },
+    
+    registerSubscription: function(subscription) {
+        // Send subscription to backend to enable push notifications from PWA
+        $.ajax({
+            url: '/api/register_push_subscription',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                subscription: subscription.toJSON()
+            }),
+            success: function() {
+                console.log('[Mobile] Push subscription registered');
+            },
+            error: function(error) {
+                console.error('[Mobile] Failed to register subscription:', error);
+            }
+        });
+    },
+    
+    urlBase64ToUint8Array: function(base64String) {
+        // Convert VAPID key from base64 to Uint8Array
+        try {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        } catch (error) {
+            console.error('[Mobile] Error converting VAPID key:', error);
+            return undefined;
         }
     }
 };
