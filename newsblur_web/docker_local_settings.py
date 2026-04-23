@@ -9,10 +9,11 @@ ADMINS = (("Samuel Clay", "samuel@newsblur.com"),)
 
 SERVER_EMAIL = "server@newsblur.com"
 HELLO_EMAIL = "hello@newsblur.com"
-NEWSBLUR_URL = "https://beelink-ubuntu.tail624886.ts.net"
-PUSH_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
-SESSION_COOKIE_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
-DISABLE_SUBDOMAINS = True
+# Use environment variables for deployment flexibility
+NEWSBLUR_URL = os.getenv("NEWSBLUR_URL", "https://localhost")
+PUSH_DOMAIN = os.getenv("PUSH_DOMAIN", NEWSBLUR_URL.replace("https://", "").replace("http://", ""))
+SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN", PUSH_DOMAIN)
+DISABLE_SUBDOMAINS = os.getenv("DISABLE_SUBDOMAINS", "true").lower() == "true"
 
 # ===================
 # = Global Settings =
@@ -200,18 +201,18 @@ DO_TOKEN_LOG = "0000000000000000000000000000000000000000000000000000000000000000
 DO_TOKEN_FABRIC = "0000000000000000000000000000000000000000000000000000000000000000"
 
 SERVER_NAME = "nblocalhost"
-NEWSBLUR_URL = os.getenv("NEWSBLUR_URL", "https://beelink-ubuntu.tail624886.ts.net")
-
-if NEWSBLUR_URL == "https://beelink-ubuntu.tail624886.ts.net":
-    SESSION_COOKIE_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
 
 SESSION_ENGINE = "redis_sessions.session"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
-CSRF_TRUSTED_ORIGINS = [
-    "https://beelink-ubuntu.tail624886.ts.net",
-    "https://100.94.165.14",
-]
+
+# Build CSRF_TRUSTED_ORIGINS from environment variables
+_csrf_origins = [NEWSBLUR_URL]
+_tailscale_ip = os.getenv("TAILSCALE_IP", "")
+if _tailscale_ip:
+    _csrf_origins.append(f"https://{_tailscale_ip}")
+CSRF_TRUSTED_ORIGINS = _csrf_origins
+
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 

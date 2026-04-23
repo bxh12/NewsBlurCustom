@@ -76,28 +76,36 @@ make
 
 Visit `https://localhost` (type `thisisunsafe` to bypass the self-signed certificate warning).
 
-### Access over Tailscale (MagicDNS)
+### Configuration
 
-This setup works well over a Tailscale tailnet by binding HAProxy to your node's **Tailscale IP** and serving TLS with a cert in `config/certificates/`.
-
-1) Ensure `.env` contains your current Tailscale IP (used by `docker-compose.yml` port bindings):
+Copy `.env.example` to `.env` and customize for your deployment:
 
 ```bash
+cp .env.example .env
+# Edit .env with your settings
+```
+
+Key configuration options:
+
+- **NEWSBLUR_URL** - Public URL of your instance (default: `https://localhost`)
+- **SESSION_COOKIE_DOMAIN** - Domain for session cookies (default: extracted from NEWSBLUR_URL)
+- **PUSH_DOMAIN** - Domain for push notifications (default: extracted from NEWSBLUR_URL)
+- **TAILSCALE_IP** - Your node's Tailscale IP (if using Tailscale)
+- **DISABLE_SUBDOMAINS** - Set to `true` for Tailscale MagicDNS deployments
+
+### Access over Tailscale (MagicDNS)
+
+This setup works well over a Tailscale tailnet. Environment variables handle the configuration automatically.
+
+1) Ensure `.env` contains your current Tailscale IP:
+
+```bash
+NEWSBLUR_URL=https://beelink-ubuntu.tail624886.ts.net
 TAILSCALE_IP=100.94.165.14
+DISABLE_SUBDOMAINS=true
 ```
 
-2) Set your canonical URL and disable username-subdomain routing (MagicDNS hostnames have multiple dots, which otherwise triggers NewsBlur's subdomain redirect logic):
-
-Create/modify `newsblur_web/local_settings.py`:
-
-```py
-NEWSBLUR_URL = "https://beelink-ubuntu.tail624886.ts.net"
-SESSION_COOKIE_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
-PUSH_DOMAIN = "beelink-ubuntu.tail624886.ts.net"
-DISABLE_SUBDOMAINS = True
-```
-
-3) Provide a TLS cert PEM (cert + private key concatenated) in:
+2) Provide a TLS cert PEM (cert + private key concatenated) in:
 
 - `config/certificates/localhost.pem`
 - `config/certificates/<your-magicdns-host>.pem`

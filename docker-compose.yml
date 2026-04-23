@@ -197,8 +197,8 @@ services:
       - MCP_HOST=0.0.0.0
       - MCP_OAUTH_CLIENT_ID=newsblur-mcp-server
       - MCP_OAUTH_CLIENT_SECRET=newsblur-mcp-dev-secret
-      - MCP_OAUTH_BASE_URL=https://beelink-ubuntu.tail624886.ts.net/mcp
-      - MCP_OAUTH_UPSTREAM_URL=https://beelink-ubuntu.tail624886.ts.net
+      - MCP_OAUTH_BASE_URL=${NEWSBLUR_URL:-https://localhost}/mcp
+      - MCP_OAUTH_UPSTREAM_URL=${NEWSBLUR_URL:-https://localhost}
       - MCP_OAUTH_INTERNAL_URL=http://newsblur_web:8000
       - MCP_REDIS_URL=redis://newsblur_db_redis:6579/5
     volumes:
