@@ -152,10 +152,24 @@ def tos(request):
 
 
 def webmanifest(request):
+    import json
+    import os
+    
+    # Serve PWA manifest for mobile app
+    pwa_manifest_path = os.path.join(settings.BASE_DIR, 'public', 'manifest.webmanifest')
+    
+    if os.path.exists(pwa_manifest_path):
+        with open(pwa_manifest_path) as f:
+            manifest = json.load(f)
+            return HttpResponse(json.dumps(manifest), content_type="application/manifest+json")
+    
+    # Fallback to old manifest for backwards compatibility
     filename = settings.MEDIA_ROOT + "/extensions/edge/manifest.json"
-    manifest = open(filename).read()
-
-    return HttpResponse(manifest, content_type="application/manifest+json")
+    if os.path.exists(filename):
+        manifest = open(filename).read()
+        return HttpResponse(manifest, content_type="application/manifest+json")
+    
+    return HttpResponse(json.dumps({}), content_type="application/manifest+json")
 
 
 def apple_app_site_assoc(request):

@@ -1,0 +1,68 @@
+{
+  "name": "NewsBlur - Personal News Reader",
+  "short_name": "NewsBlur",
+  "description": "A personal news reader with intelligence and training. Read your RSS feeds with powerful filtering tools.",
+  "start_url": "/mobile/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#3d4e3f",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/media/img/logo_64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "/media/img/logo_144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/media/img/logo_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/media/img/logo_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/media/img/logo_512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["news", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Unread Stories",
+      "short_name": "Unread",
+      "description": "View all unread stories",
+      "url": "/mobile/?filter=unread",
+      "icons": [
+        {
+          "src": "/media/img/logo_96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Starred Stories",
+      "short_name": "Starred",
+      "description": "View starred stories",
+      "url": "/mobile/?filter=starred",
+      "icons": [
+        {
+          "src": "/media/img/logo_96.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}

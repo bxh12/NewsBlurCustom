@@ -3,6 +3,7 @@ from django.conf.urls import *
 from apps.reader import views
 
 urlpatterns = [
+    url(r"^mobile/?$", views.mobile, name="mobile"),
     url(r"^$", views.index),
     url(r"^buster", views.iframe_buster, name="iframe-buster"),
     url(r"^login_as", views.login_as, name="login_as"),

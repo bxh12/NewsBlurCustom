@@ -308,6 +308,27 @@ def index(request, **kwargs):
         return dashboard(request, **kwargs)
 
 
+@never_cache
+@render_to("reader/mobile.xhtml")
+def mobile(request, **kwargs):
+    """Mobile PWA view - single pane layout optimized for phones"""
+    if request.user.is_anonymous:
+        return welcome(request, **kwargs)
+    
+    user = request.user
+    feed_count = UserSubscription.objects.filter(user=request.user).count()
+    preferences = json.decode(user.profile.preferences)
+    
+    logging.user(request, "~FBLoading mobile PWA")
+    
+    return {
+        "user_profile": user.profile,
+        "preferences": preferences,
+        "feed_count": feed_count,
+        "is_mobile": True,
+    }
+
+
 def dashboard(request, **kwargs):
     user = request.user
     feed_count = UserSubscription.objects.filter(user=request.user).count()

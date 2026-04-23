@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% load recommendations_tags utils_tags statistics_tags %}
+
+{% block extra_head_js %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/reader/mobile.css' %}" />
+    <script>
+        $(document).ready(function() {
+            NEWSBLUR.mobile = new NEWSBLUR.MobileReader();
+            NEWSBLUR.mobile.init();
+        });
+    </script>
+{% endblock %}
+
+{% block bodyclass %}
+  NB-body-mobile NB-mobile-single-pane
+  {% if preferences.theme == "dark" %}NB-dark{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div id="NB-mobile-container" class="NB-mobile-container">
+  
+  <!-- Mobile Header/Nav -->
+  <header class="NB-mobile-header">
+    <button class="NB-mobile-menu-toggle" id="NB-mobile-menu-toggle">
+      <span class="NB-menu-icon">☰</span>
+    </button>
+    <h1 class="NB-mobile-title">NewsBlur</h1>
+    <button class="NB-mobile-add-feed" id="NB-mobile-add-feed">
+      <span class="NB-add-icon">+</span>
+    </button>
+  </header>
+
+  <!-- Mobile Sidebar/Drawer -->
+  <nav class="NB-mobile-sidebar" id="NB-mobile-sidebar">
+    <div class="NB-mobile-sidebar-header">
+      <h2>Feeds</h2>
+      <button class="NB-mobile-sidebar-close" id="NB-mobile-sidebar-close">✕</button>
+    </div>
+    <div class="NB-mobile-feeds-list" id="NB-mobile-feeds-list">
+      <!-- Feeds will be loaded here -->
+    </div>
+    <div class="NB-mobile-sidebar-footer">
+      <button class="NB-mobile-settings-btn" id="NB-mobile-settings-btn">Settings</button>
+      <button class="NB-mobile-logout-btn" id="NB-mobile-logout-btn">Logout</button>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="NB-mobile-main">
+    
+    <!-- Stories List View -->
+    <div class="NB-mobile-stories-view" id="NB-mobile-stories-view">
+      <div class="NB-mobile-stories-header">
+        <h3 id="NB-mobile-current-feed">All Stories</h3>
+        <div class="NB-mobile-filter-tabs">
+          <button class="NB-filter-tab active" data-filter="unread">Unread</button>
+          <button class="NB-filter-tab" data-filter="all">All</button>
+          <button class="NB-filter-tab" data-filter="starred">Starred</button>
+        </div>
+      </div>
+      <div class="NB-mobile-stories-list" id="NB-mobile-stories-list">
+        <!-- Stories will be loaded here -->
+      </div>
+      <div class="NB-mobile-loading" id="NB-mobile-loading" style="display:none;">
+        <p>Loading...</p>
+      </div>
+    </div>
+
+    <!-- Story Detail View -->
+    <div class="NB-mobile-story-view" id="NB-mobile-story-view" style="display:none;">
+      <div class="NB-mobile-story-header">
+        <button class="NB-mobile-back-btn" id="NB-mobile-back-btn">← Back</button>
+        <div class="NB-mobile-story-actions">
+          <button class="NB-mobile-star-btn" id="NB-mobile-star-btn" title="Star story">★</button>
+          <button class="NB-mobile-mark-read-btn" id="NB-mobile-mark-read-btn" title="Mark as read">✓</button>
+        </div>
+      </div>
+      <article class="NB-mobile-story-content">
+        <h2 id="NB-mobile-story-title"></h2>
+        <div class="NB-mobile-story-meta">
+          <span id="NB-mobile-story-feed"></span>
+          <span id="NB-mobile-story-date"></span>
+        </div>
+        <div id="NB-mobile-story-body"></div>
+        <div class="NB-mobile-story-source">
+          <a id="NB-mobile-story-link" target="_blank">Read original</a>
+        </div>
+      </article>
+    </div>
+
+  </main>
+
+</div>
+
+<!-- Mobile Overlay for Sidebar -->
+<div class="NB-mobile-overlay" id="NB-mobile-overlay"></div>
+
+{% endblock %}
