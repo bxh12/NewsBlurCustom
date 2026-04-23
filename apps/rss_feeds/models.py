@@ -913,7 +913,8 @@ class Feed(models.Model):
 
     def setup_feed_for_premium_subscribers(self, allow_skip_resync=False):
         self.count_subscribers()
-        self.count_similar_feeds()
+        # Disabled similar feeds lookup to avoid OpenAI API dependency
+        # self.count_similar_feeds()
         self.set_next_scheduled_update()
         self.sync_redis(allow_skip_resync=allow_skip_resync)
 
