@@ -1,116 +1,121 @@
-{% load utils_tags %}
-<!DOCTYPE html>
-<html>
-<head>
-  <title>{% block title %}NewsBlur{% endblock %}</title>
-  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
-  <link rel="shortcut icon" HREF="/media/img/favicon.png">
+{% extends 'base.html' %}
 
-  <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+{% load recommendations_tags utils_tags statistics_tags %}
 
-  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-  <link rel="apple-touch-icon" href="/media/img/logo_128.png"/>
+{% block extra_head_js %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/reader/mobile.css' %}" />
+    <script src="{% static 'js/newsblur/mobile/mobile_reader.js' %}"></script>
+    <script>
+        $(document).ready(function() {
+            NEWSBLUR.mobile = new NEWSBLUR.MobileReader();
+            NEWSBLUR.mobile.init();
+            
+            // Register service worker for PWA features
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('{% static "js/service-worker.js" %}')
+                    .then(function(reg) {
+                        console.log('[Mobile] Service Worker registered successfully');
+                        // Check for updates periodically
+                        setInterval(function() {
+                            reg.update();
+                        }, 60000);
+                    })
+                    .catch(function(error) {
+                        console.warn('[Mobile] Service Worker registration failed:', error);
+                    });
+            }
+            
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        });
+    </script>
+{% endblock %}
 
-  <script type="text/javascript" charset="utf-8">
-    var NEWSBLUR = {};
-    NEWSBLUR.Globals = {
-      'is_authenticated'        : {{ user.is_authenticated|yesno:"true,false" }},
-      'is_anonymous'            : {{ user.is_anonymous|yesno:"true,false" }},
-      'is_premium'              : {{ user.profile.is_premium|yesno:"true,false" }},
-      'secret_token'            : "{{ user.profile.secret_token }}",
-      'username'                : "{{ user.username|safe }}",
-      'email'                   : "{{ user.email|safe }}",
-      'MEDIA_URL'               : "{{ MEDIA_URL }}"
-    };
-    NEWSBLUR.Flags = {
-    };
-    NEWSBLUR.URLs = {
-      'domain'                  : "{% current_domain %}"
-    };
-    NEWSBLUR.Models = {};
-    NEWSBLUR.Collections = {};
-  </script>
+{% block bodyclass %}
+  NB-body-mobile NB-mobile-single-pane
+  {% if preferences.theme == "dark" %}NB-dark{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div id="NB-mobile-container" class="NB-mobile-container">
+  
+  <!-- Mobile Header/Nav -->
+  <header class="NB-mobile-header">
+    <button class="NB-mobile-menu-toggle" id="NB-mobile-menu-toggle">
+      <span class="NB-menu-icon">☰</span>
+    </button>
+    <h1 class="NB-mobile-title">NewsBlur</h1>
+    <button class="NB-mobile-add-feed" id="NB-mobile-add-feed">
+      <span class="NB-add-icon">+</span>
+    </button>
+  </header>
+
+  <!-- Mobile Sidebar/Drawer -->
+  <nav class="NB-mobile-sidebar" id="NB-mobile-sidebar">
+    <div class="NB-mobile-sidebar-header">
+      <h2>Feeds</h2>
+      <button class="NB-mobile-sidebar-close" id="NB-mobile-sidebar-close">✕</button>
+    </div>
+    <div class="NB-mobile-feeds-list" id="NB-mobile-feeds-list">
+      <!-- Feeds will be loaded here -->
+    </div>
+    <div class="NB-mobile-sidebar-footer">
+      <button class="NB-mobile-settings-btn" id="NB-mobile-settings-btn">Settings</button>
+      <button class="NB-mobile-logout-btn" id="NB-mobile-logout-btn">Logout</button>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="NB-mobile-main">
     
-  {% include_stylesheets "mobile" %}
-  {% block head_js %}
-    {% include_javascripts "mobile" %}
-  {% endblock head_js %}
-  {% block extra_head_js %}
-  {% endblock extra_head_js %}
-  
-  {% if not debug %}
-  <script type="text/javascript">
-
-    var _gaq = _gaq || [];
-    _gaq.push(['_setAccount', 'UA-8371683-2']);
-    _gaq.push(['_trackPageview']);
-
-    (function() {
-      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-    })();
-
-  </script>
-  {% endif %}
-  
-</head>
-<body>
-  
-  
-  <div data-role="page" data-url="feeds" id="NB-page-feeds"> 
-    <div data-role="header" data-backbtn="false"> 
-      <h1>{{ request.user.username }}</h1>
-    </div>
-    <div data-role="content">
-      <div id="NB-feed-list"></div>
-    </div>
-    <div data-role="footer">
-      <div class="NB-footer-site-count ui-li-count">12 sites</div>
-    </div>
-  </div>
-  
-  <div data-role="page" data-url="stories" id="NB-page-stories"> 
-    <div data-role="header"> 
-      <a href="#" data-icon="arrow-l" data-back-btn-text="Sites" data-rel="back">Sites</a>
-      <h1>Stories</h1>
-    </div>
-    <div data-role="content">
-      <div id="NB-story-list"></div>
-    </div>
-    <div data-role="footer" class="ui-header"> 1
-      <div class="NB-footer-site-count ui-li-count">12 sites</div>
-    </div>
-  </div>
-  
-  <div data-role="page" data-url="story" id="NB-page-story"> 
-    <div data-role="header"> 
-      <a href="#" data-icon="arrow-l" data-back-btn-text="Stories" data-rel="back">Stories</a>
-      <h1>Story</h1>
-      <a href="#" data-icon="arrow-d" class="ui-btn-right NB-next">Next Unread</a>
-    </div>
-    <div data-role="content">
-      <div id="NB-story-detail">
-        
+    <!-- Stories List View -->
+    <div class="NB-mobile-stories-view" id="NB-mobile-stories-view">
+      <div class="NB-mobile-stories-header">
+        <h3 id="NB-mobile-current-feed">All Stories</h3>
+        <div class="NB-mobile-filter-tabs">
+          <button class="NB-filter-tab active" data-filter="unread">Unread</button>
+          <button class="NB-filter-tab" data-filter="all">All</button>
+          <button class="NB-filter-tab" data-filter="starred">Starred</button>
+        </div>
+      </div>
+      <div class="NB-mobile-stories-list" id="NB-mobile-stories-list">
+        <!-- Stories will be loaded here -->
+      </div>
+      <div class="NB-mobile-loading" id="NB-mobile-loading" style="display:none;">
+        <p>Loading...</p>
       </div>
     </div>
-    <div data-role="footer" class="ui-header">
-      <a href="#" data-icon="arrow-u" class="NB-previous">Previous</a>
-      <h1>...</h1>
-      <a href="#" data-icon="arrow-d" class="ui-btn-right NB-next">Next Unread</a>
+
+    <!-- Story Detail View -->
+    <div class="NB-mobile-story-view" id="NB-mobile-story-view" style="display:none;">
+      <div class="NB-mobile-story-header">
+        <button class="NB-mobile-back-btn" id="NB-mobile-back-btn">← Back</button>
+        <div class="NB-mobile-story-actions">
+          <button class="NB-mobile-star-btn" id="NB-mobile-star-btn" title="Star story">★</button>
+          <button class="NB-mobile-mark-read-btn" id="NB-mobile-mark-read-btn" title="Mark as read">✓</button>
+        </div>
+      </div>
+      <article class="NB-mobile-story-content">
+        <h2 id="NB-mobile-story-title"></h2>
+        <div class="NB-mobile-story-meta">
+          <span id="NB-mobile-story-feed"></span>
+          <span id="NB-mobile-story-date"></span>
+        </div>
+        <div id="NB-mobile-story-body"></div>
+        <div class="NB-mobile-story-source">
+          <a id="NB-mobile-story-link" target="_blank">Read original</a>
+        </div>
+      </article>
     </div>
-  </div>
-  
-  
-  <script>
-    $(document).bind('mobileinit', function() {
-        $.mobile.ajaxEnabled = false;
-    });
-    $(document).bind('ready', function() {
-        NEWSBLUR.mobile_reader = new NEWSBLUR.MobileReader();
-    });
-  </script>
-  
-</body>
-</html>
+
+  </main>
+
+</div>
+
+<!-- Mobile Overlay for Sidebar -->
+<div class="NB-mobile-overlay" id="NB-mobile-overlay"></div>
+
+{% endblock %}

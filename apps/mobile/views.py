@@ -14,4 +14,20 @@ from utils import log as logging
 
 
 def index(request):
-    return render(request, "mobile/mobile_workspace.xhtml", {})
+    """Mobile PWA workspace - serves the progressive web app interface"""
+    if request.user.is_anonymous:
+        from apps.reader.views import welcome
+        return welcome(request)
+    
+    user = request.user
+    feed_count = UserSubscription.objects.filter(user=request.user).count()
+    preferences = json.decode(user.profile.preferences)
+    
+    logging.user(request, "~FBLoading mobile PWA")
+    
+    return render(request, "mobile/mobile_workspace.xhtml", {
+        "user_profile": user.profile,
+        "preferences": preferences,
+        "feed_count": feed_count,
+        "is_mobile": True,
+    })
