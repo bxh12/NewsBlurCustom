@@ -4,10 +4,31 @@
 
 {% block extra_head_js %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/reader/mobile.css' %}" />
+    <script src="{% static 'js/newsblur/mobile/mobile_reader.js' %}"></script>
     <script>
         $(document).ready(function() {
             NEWSBLUR.mobile = new NEWSBLUR.MobileReader();
             NEWSBLUR.mobile.init();
+            
+            // Register service worker for PWA features
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('{% static "js/service-worker.js" %}')
+                    .then(function(reg) {
+                        console.log('[Mobile] Service Worker registered successfully');
+                        // Check for updates periodically
+                        setInterval(function() {
+                            reg.update();
+                        }, 60000);
+                    })
+                    .catch(function(error) {
+                        console.warn('[Mobile] Service Worker registration failed:', error);
+                    });
+            }
+            
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
         });
     </script>
 {% endblock %}
