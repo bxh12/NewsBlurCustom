@@ -65,6 +65,8 @@ class MUserNotificationTokens(mongo.Document):
 
     user_id = mongo.IntField()
     ios_tokens = mongo.ListField(mongo.StringField(max_length=1024))
+    android_tokens = mongo.ListField(mongo.StringField(max_length=1024))
+    web_subscriptions = mongo.ListField(mongo.StringField(max_length=2048))
     use_sandbox = mongo.BooleanField(default=False)
 
     meta = {
